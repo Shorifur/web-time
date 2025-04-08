@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Relativistic Time Dilation Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .calculator {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f4fc;
+            border-radius: 5px;
+            display: none;
+        }
+        .formula {
+            font-family: monospace;
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1> Time Dilation Calculator</h1>
+        
+        <div class="input-group">
+            <label for="mode">Calculation Mode:</label>
+            <select id="mode">
+                <option value="earthTime">Calculate Earth Time from Traveler's Speed</option>
+                <option value="requiredSpeed">Calculate Required Speed for Target Time</option>
+            </select>
+        </div>
+        
+        <div id="earthTimeInputs">
+            <div class="input-group">
+                <label for="nines">Number of 9's in speed (e.g., 20 for 99.999...999%):</label>
+                <input type="number" id="nines" min="1" max="50" value="20">
+            </div>
+            <div class="input-group">
+                <label for="travelerTime1">Traveler's experienced time:</label>
+                <input type="number" id="travelerTime1" value="1">
+                <select id="timeUnit1">
+                    <option value="seconds">Seconds</option>
+                    <option value="minutes" selected>Minutes</option>
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                    <option value="years">Years</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="requiredSpeedInputs" style="display:none;">
+            <div class="input-group">
+                <label for="travelerTime2">Traveler's experienced time:</label>
+                <input type="number" id="travelerTime2" value="1">
+                <select id="timeUnit2">
+                    <option value="seconds">Seconds</option>
+                    <option value="minutes" selected>Minutes</option>
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                    <option value="years">Years</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="earthTime">Desired Earth time:</label>
+                <input type="number" id="earthTime" value="13400000000">
+                <select id="earthTimeUnit">
+                    <option value="years" selected>Years</option>
+                    <option value="days">Days</option>
+                </select>
+            </div>
+        </div>
+        
+        <button onclick="calculate()">Calculate</button>
+        
+        <div id="result" class="result">
+            <h3>Results</h3>
+            <div id="resultContent"></div>
+            <p><small>Using formula: <span class="formula">γ = 1/√(1-v²/c²)</span></small></p>
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            const mode = document.getElementById('mode').value;
+            let resultHTML = '';
+            
+            if (mode === 'earthTime') {
+                const nines = parseInt(document.getElementById('nines').value);
+                const travelerTime = parseFloat(document.getElementById('travelerTime1').value);
+                const timeUnit = document.getElementById('timeUnit1').value;
+                
+                // Convert traveler time to seconds
+                const travelerTimeSec = convertToSeconds(travelerTime, timeUnit);
+                
+                // Calculate
+                const epsilon = Math.pow(10, -nines);
+                const gamma = 1 / Math.sqrt(2 * epsilon);
+                const earthTimeSec = gamma * travelerTimeSec;
+                const earthTimeYears = earthTimeSec / (60 * 60 * 24 * 365.25);
+                
+                // Display results
+                resultHTML = `
+                    <p>For speed: <strong>${(100*(1-Math.pow(10, -nines))).toFixed(nines)}% of light speed</strong> (${nines} nines)</p>
+                    <p>Lorentz factor (γ): <strong>${gamma.toExponential(3)}</strong></p>
+                    <p>${travelerTime} ${timeUnit} for traveler = <strong>${formatLargeNumber(earthTimeYears)} years</strong> on Earth</p>
+                `;
+                
+            } else {
+                const travelerTime = parseFloat(document.getElementById('travelerTime2').value);
+                const timeUnit = document.getElementById('timeUnit2').value;
+                const earthTime = parseFloat(document.getElementById('earthTime').value);
+                const earthTimeUnit = document.getElementById('earthTimeUnit').value;
+                
+                // Convert to seconds
+                const travelerTimeSec = convertToSeconds(travelerTime, timeUnit);
+                let earthTimeSec;
+                if (earthTimeUnit === 'years') {
+                    earthTimeSec = earthTime * 60 * 60 * 24 * 365.25;
+                } else {
+                    earthTimeSec = earthTime * 60 * 60 * 24;
+                }
+                
+                // Calculate required gamma and nines
+                const requiredGamma = earthTimeSec / travelerTimeSec;
+                const epsilon = 1 / (2 * Math.pow(requiredGamma, 2));
+                const nines = -Math.log10(epsilon);
+                const speedPercentage = 100 * (1 - Math.pow(10, -nines));
+                
+                resultHTML = `
+                    <p>To experience <strong>${travelerTime} ${timeUnit}</strong> while <strong>${formatLargeNumber(earthTime)} ${earthTimeUnit}</strong> pass on Earth:</p>
+                    <p>Required Lorentz factor (γ): <strong>${requiredGamma.toExponential(3)}</strong></p>
+                    <p>Required speed: <strong>${speedPercentage.toFixed(Math.ceil(nines))}%</strong> of light speed</p>
+                    <p>Number of 9's needed: <strong>${nines.toFixed(1)}</strong></p>
+                `;
+            }
+            
+            document.getElementById('resultContent').innerHTML = resultHTML;
+            document.getElementById('result').style.display = 'block';
+        }
+        
+        function convertToSeconds(value, unit) {
+            switch(unit) {
+                case 'seconds': return value;
+                case 'minutes': return value * 60;
+                case 'hours': return value * 60 * 60;
+                case 'days': return value * 60 * 60 * 24;
+                case 'years': return value * 60 * 60 * 24 * 365.25;
+                default: return value;
+            }
+        }
+        
+        function formatLargeNumber(num) {
+            if (num >= 1e12) return (num/1e12).toFixed(1) + ' trillion';
+            if (num >= 1e9) return (num/1e9).toFixed(1) + ' billion';
+            if (num >= 1e6) return (num/1e6).toFixed(1) + ' million';
+            return num.toLocaleString();
+        }
+        
+        // Toggle input fields based on mode
+        document.getElementById('mode').addEventListener('change', function() {
+            if (this.value === 'earthTime') {
+                document.getElementById('earthTimeInputs').style.display = 'block';
+                document.getElementById('requiredSpeedInputs').style.display = 'none';
+            } else {
+                document.getElementById('earthTimeInputs').style.display = 'none';
+                document.getElementById('requiredSpeedInputs').style.display = 'block';
+            }
+            document.getElementById('result').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
